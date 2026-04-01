@@ -32,27 +32,42 @@ export default async function handler(req, res) {
     const isIndexSearch = /^\d+$/.test(q);
 
     if (isIndexSearch) {
+      // 1. Exact Index Search
       const student = await collection.findOne({ _id: q });
       if (student) rawResults = [student];
     } else {
-      rawResults = await collection.find({ "d.nam": { $regex: q, $options: 'i' } }).limit(20).toArray();
+      // 2. INTELLIGENT NAME SEARCH
+      // Splits "malidu nimsara" into ["malidu", "nimsara"] and requires ALL words to match
+      const searchTerms = q.trim().split(/\s+/);
+      const regexConditions = searchTerms.map(term => ({
+        "d.nam": { $regex: term, $options: 'i' }
+      }));
+      
+      rawResults = await collection.find({ $and: regexConditions })
+        .sort({ "d.nam": 1 }) // Sort alphabetically to make finding names easier
+        .limit(50)            // Increased limit to 50 to show more results
+        .toArray();
     }
 
-    const maskedResults = rawResults.map(student => {
+    // 3. PRIVACY & UNIQUE ID MAPPING
+    const maskedResults = rawResults.map((student, index) => {
       const nic = student.d?.nic || "";
       let birthYear = "N/A";
       
-      // Calculate Birth Year
       if (nic.length === 12) birthYear = nic.substring(0, 4);
       else if (nic.length === 10) birthYear = "19" + nic.substring(0, 2);
 
       return {
-        _id: isIndexSearch ? student._id : student._id.substring(0, 3) + "****",
+        // We create a unique hidden ID so React doesn't highlight multiple students
+        _uiKey: `student_${index}_${Math.random().toString(36).substr(2, 9)}`,
+        
+        // This is what the user actually sees on the screen
+        displayIndex: isIndexSearch ? student._id : student._id.substring(0, 3) + "****",
+        
         r: student.r || [],
         d: {
           nam: student.d?.nam || "N/A",
           sub: student.d?.sub || "N/A",
-          // MAPPING FIX: Using the specific keys from your provided JSON
           zsc: student.d?.["z -"] || student.d?.zsc || "N/A", 
           dis: student.d?.dis || "N/A",
           isl: student.d?.isl || "N/A",
