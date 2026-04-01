@@ -93,7 +93,7 @@ const App = () => {
             <div className="p-3 bg-indigo-600 rounded-2xl shadow-xl"><GraduationCap className="text-white w-8 h-8" /></div>
             <div>
               <h1 className="text-2xl font-black text-slate-800 tracking-tight">AL-INSIGHT SL</h1>
-              <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">A/L 2024 Exam Portal</p>
+              <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">A/L 2025 Exam Portal</p>
             </div>
           </div>
           <div className="px-4 py-2 bg-white rounded-full border border-slate-200 shadow-sm flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase">
