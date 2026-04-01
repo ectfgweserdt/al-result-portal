@@ -115,7 +115,7 @@ const App = () => {
             </div>
             <div>
               <h1 className="text-2xl font-black text-slate-800 tracking-tight">AL-INSIGHT SL</h1>
-              <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">2024 Exam Intelligence</p>
+              <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">2025 Exam Intelligence</p>
             </div>
           </div>
           <div className="px-4 py-2 bg-white rounded-full border border-slate-200 shadow-sm flex items-center gap-2">
