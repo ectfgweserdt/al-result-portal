@@ -1,13 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Search, GraduationCap, BrainCircuit, Loader2, AlertTriangle, CheckCircle2, Zap } from 'lucide-react';
 
-// Safe access to environment variables
+// This helper function safely grabs your Gemini Key from Vercel's settings
 const getApiKey = () => {
-  try {
-    return [import.meta.env.VITE_GEMINI_KEY || ""];
-  } catch (e) {
-    return [""];
-  }
+  try { return [import.meta.env.VITE_GEMINI_KEY || ""]; } 
+  catch (e) { return [""]; }
 };
 
 const GEMINI_KEYS = getApiKey();
@@ -21,6 +18,7 @@ const App = () => {
   const [analyzing, setAnalyzing] = useState(false);
   const [error, setError] = useState(null);
 
+  // Load any previously generated AI advice from the browser's memory
   useEffect(() => {
     const saved = localStorage.getItem('ai_analysis_cache');
     if (saved) setAiCache(JSON.parse(saved));
@@ -28,45 +26,52 @@ const App = () => {
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!searchTerm || searchTerm.length < 3) return;
+    if (!searchTerm || searchTerm.length < 3) {
+      setError("Please enter at least 3 characters.");
+      return;
+    }
 
     setLoading(true);
     setError(null);
+    setResults([]);
+    setSelectedStudent(null);
     
-    // Replace with your real API fetch later
-    setTimeout(() => {
-      if (searchTerm.includes("1000012") || searchTerm.toLowerCase().includes("rumana")) {
-        setResults([{
-          id: "1000012",
-          d: { nam: "M.R. FATHIMA RUMANA", sub: "COMMERCE", zsc: "1.0128", dis: "1972", isl: "10189" },
-          r: [
-            { s: "ECONOMICS", g: "B" },
-            { s: "BUSINESS STUDIES", g: "C" },
-            { s: "ACCOUNTING", g: "A" },
-            { s: "GENERAL ENGLISH", g: "A" }
-          ]
-        }]);
-      } else {
-        setError("No results found. Double check the Index number.");
+    try {
+      // 🚀 CALLS YOUR BACKEND API (search.js) 🚀
+      const response = await fetch(`/api/search?q=${encodeURIComponent(searchTerm)}`);
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || "Failed to search database.");
       }
+
+      if (data.length === 0) {
+        setError("No students found matching that Index or Name.");
+      } else {
+        if (data.length === 1) setSelectedStudent(data[0]);
+        setResults(data);
+      }
+    } catch (err) {
+      setError(err.message);
+    } finally {
       setLoading(false);
-    }, 600);
+    }
   };
 
   const getAIAnalysis = async (student) => {
-    if (aiCache[student.id]) return;
+    if (aiCache[student._id]) return;
 
     setAnalyzing(true);
     const key = GEMINI_KEYS[Math.floor(Math.random() * GEMINI_KEYS.length)]; 
     
     if (!key) {
-      setError("AI Key not configured. Set VITE_GEMINI_KEY in your hosting provider.");
+      setError("AI Key not configured. Set VITE_GEMINI_KEY in Vercel settings.");
       setAnalyzing(false);
       return;
     }
 
     const prompt = `Student: ${student.d.nam}. Results: ${JSON.stringify(student.r)}. Z-Score: ${student.d.zsc}. 
-    Provide a 3-sentence encouraging career advice for this Sri Lankan student.`;
+    Provide a 3-sentence encouraging career advice for this Sri Lankan student based on these A-Level results.`;
 
     try {
       const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-lite:generateContent?key=${key}`, {
@@ -78,7 +83,7 @@ const App = () => {
       const data = await response.json();
       const text = data.candidates?.[0]?.content?.parts?.[0]?.text || "Report unavailable.";
       
-      const newCache = { ...aiCache, [student.id]: text };
+      const newCache = { ...aiCache, [student._id]: text };
       setAiCache(newCache);
       localStorage.setItem('ai_analysis_cache', JSON.stringify(newCache));
     } catch (err) {
@@ -89,10 +94,10 @@ const App = () => {
   };
 
   return (
-    <div className="min-h-screen text-slate-900 p-4 md:p-10">
+    <div className="min-h-screen bg-[#f8fafc] text-slate-900 p-4 md:p-10">
       <div className="max-w-5xl mx-auto">
         
-        {/* Header */}
+        {/* Header Section */}
         <div className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
           <div className="flex items-center gap-4">
             <div className="p-3 bg-indigo-600 rounded-2xl shadow-xl">
@@ -105,17 +110,17 @@ const App = () => {
           </div>
           <div className="px-4 py-2 bg-white rounded-full border border-slate-200 shadow-sm flex items-center gap-2">
             <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Server: Online</span>
+            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Live Database Connected</span>
           </div>
         </div>
 
-        {/* Search Bar */}
+        {/* Search Input Area */}
         <div className="bg-white p-2 rounded-3xl shadow-2xl mb-10 border border-slate-100">
           <form onSubmit={handleSearch} className="flex items-center">
             <div className="pl-6 text-slate-300"><Search /></div>
             <input
               type="text"
-              placeholder="Enter Index Number"
+              placeholder="Search by Name or Index Number..."
               className="w-full p-4 md:p-6 outline-none text-lg font-medium"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
@@ -133,19 +138,22 @@ const App = () => {
         )}
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
+          
+          {/* Results Sidebar */}
           <div className="lg:col-span-4 space-y-4">
             {results.map(s => (
               <div 
-                key={s.id} 
+                key={s._id} 
                 onClick={() => setSelectedStudent(s)}
-                className={`p-6 rounded-3xl cursor-pointer transition-all border-2 ${selectedStudent?.id === s.id ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl translate-x-1' : 'bg-white border-transparent hover:border-slate-200'}`}
+                className={`p-6 rounded-3xl cursor-pointer transition-all border-2 ${selectedStudent?._id === s._id ? 'bg-indigo-600 border-indigo-600 text-white shadow-xl translate-x-1' : 'bg-white border-transparent hover:border-slate-200'}`}
               >
                 <p className="font-bold uppercase text-sm">{s.d.nam}</p>
-                <p className="text-xs opacity-60">Index: {s.id}</p>
+                <p className="text-xs opacity-60">Index: {s._id} | NIC: {s.d.nic || 'N/A'}</p>
               </div>
             ))}
           </div>
 
+          {/* Detailed View Area */}
           <div className="lg:col-span-8">
             {selectedStudent ? (
               <div className="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden border border-slate-50 animate-in slide-in-from-bottom-4 duration-500">
@@ -155,14 +163,15 @@ const App = () => {
                   <div className="flex gap-10">
                     <div>
                       <p className="text-[10px] uppercase opacity-50 font-bold">Z-Score</p>
-                      <p className="text-4xl font-black text-indigo-400">{selectedStudent.d.zsc}</p>
+                      <p className="text-4xl font-black text-indigo-400">{selectedStudent.d.zsc || 'N/A'}</p>
                     </div>
                     <div>
                       <p className="text-[10px] uppercase opacity-50 font-bold">Island Rank</p>
-                      <p className="text-4xl font-black">#{selectedStudent.d.isl}</p>
+                      <p className="text-4xl font-black">#{selectedStudent.d.isl || '---'}</p>
                     </div>
                   </div>
                 </div>
+                
                 <div className="p-8 md:p-12">
                   <div className="space-y-3 mb-10">
                     <h4 className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">Results Detail</h4>
@@ -174,7 +183,8 @@ const App = () => {
                     ))}
                   </div>
 
-                  {!aiCache[selectedStudent.id] ? (
+                  {/* AI Button/Display */}
+                  {!aiCache[selectedStudent._id] ? (
                     <button 
                       disabled={analyzing}
                       onClick={() => getAIAnalysis(selectedStudent)}
@@ -187,7 +197,7 @@ const App = () => {
                     <div className="p-6 bg-indigo-50 rounded-3xl border border-indigo-100 relative overflow-hidden">
                       <Zap className="absolute -right-6 -top-6 w-24 h-24 text-indigo-100 rotate-12" />
                       <p className="relative z-10 text-indigo-900 font-medium leading-relaxed">
-                        {aiCache[selectedStudent.id]}
+                        {aiCache[selectedStudent._id]}
                       </p>
                     </div>
                   )}
@@ -196,7 +206,7 @@ const App = () => {
             ) : (
               <div className="h-64 flex flex-col items-center justify-center bg-white rounded-[2.5rem] border-2 border-dashed border-slate-200 text-slate-400 p-10 text-center">
                 <Search className="opacity-20 mb-4 w-12 h-12" />
-                <p className="text-sm font-bold">Search and select a student to see analysis</p>
+                <p className="text-sm font-bold">Search and select a student to see the breakdown</p>
               </div>
             )}
           </div>
