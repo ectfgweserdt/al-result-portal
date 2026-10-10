@@ -2,7 +2,7 @@ import { MongoClient } from 'mongodb';
 
 const uri = process.env.MONGO_URI;
 const DB_NAME = "exam_database";
-const COLLECTION_NAME = "results_2024_al_rescrutiny";
+const COLLECTION_NAME = "results_2025_al_rescrutiny";
 
 let client;
 let clientPromise;
