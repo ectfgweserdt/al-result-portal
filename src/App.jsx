@@ -1,211 +1,169 @@
-import React, { useState, useEffect } from 'react';
-import { Search, GraduationCap, BrainCircuit, Loader2, AlertTriangle, Zap, Calendar } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import './App.css';
 
-const getApiKey = () => {
-  try { return [import.meta.env.VITE_GEMINI_KEY || ""]; } 
-  catch (e) { return [""]; }
-};
-
-const GEMINI_KEYS = getApiKey();
-
-const App = () => {
-  const [searchTerm, setSearchTerm] = useState('');
+export default function App() {
+  const [examYear, setExamYear] = useState("2025");
+  const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState(null);
-  const [aiCache, setAiCache] = useState({});
-  const [analyzing, setAnalyzing] = useState(false);
-  const [error, setError] = useState(null);
+  const [darkMode, setDarkMode] = useState(true);
+  
+  // Special Privileges State
+  const [showLogin, setShowLogin] = useState(false);
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
+  const canvasRef = useRef(null);
+
+  // Transparent Hacking / Matrix Rain Effect Hook
   useEffect(() => {
-    const saved = localStorage.getItem('ai_analysis_cache');
-    if (saved) setAiCache(JSON.parse(saved));
-  }, []);
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext('2d');
+    let animationFrameId;
+
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const katakana = 'アァカサタナハマヤャラワガザダバパイィキシチニヒミリヰギジヂビピウゥクスツヌフムユュルグズブヅプエェケセテネヘメレヱゲゼデベペオォコソトノホモヨョロヲゴゾドボポヴッン';
+    const latin = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789{}[]<>//\\*#@!$_';
+    const alphabet = katakana + latin;
+
+    const fontSize = 16;
+    const columns = canvas.width / fontSize;
+    const rainDrops = Array.from({ length: columns }).fill(1);
+
+    const render = () => {
+      ctx.fillStyle = darkMode ? 'rgba(10, 15, 30, 0.08)' : 'rgba(240, 244, 248, 0.08)';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = darkMode ? '#00ff66' : '#008833'; 
+      ctx.font = `${fontSize}px monospace`;
+
+      for (let i = 0; i < rainDrops.length; i++) {
+        const text = alphabet.charAt(Math.floor(Math.random() * alphabet.length));
+        ctx.fillText(text, i * fontSize, rainDrops[i] * fontSize);
+
+        if (rainDrops[i] * fontSize > canvas.height && Math.random() > 0.975) {
+          rainDrops[i] = 0;
+        }
+        rainDrops[i]++;
+      }
+      animationFrameId = requestAnimationFrame(render);
+    };
+
+    render();
+
+    const handleResize = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+    };
+    window.addEventListener('resize', handleResize);
+
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      window.removeEventListener('resize', handleResize);
+    };
+  }, [darkMode]);
 
   const handleSearch = async (e) => {
     e.preventDefault();
-    if (!searchTerm || searchTerm.length < 3) return;
-    
-    // BUG FIX: Instantly clear the old results when searching a new name
-    setResults([]);
-    setSelectedStudent(null);
-    setLoading(true);
-    setError(null);
-    
     try {
-      const response = await fetch(`/api/search?q=${encodeURIComponent(searchTerm)}`);
-      const data = await response.json();
-      
-      if (data.length === 0) {
-        setError("No records found. Try typing more of the name.");
-      } else {
-        setResults(data);
-        if (data.length === 1) setSelectedStudent(data[0]);
-      }
-    } catch (err) { 
-      setError("Connection failed. Please try again."); 
-    } finally { 
-      setLoading(false); 
-    }
-  };
-
-  const getAIAnalysis = async (student) => {
-    if (aiCache[student._uiKey]) return;
-    setAnalyzing(true);
-    const key = GEMINI_KEYS[0]; 
-    
-    if (!key) {
-      setError("AI Key missing in settings.");
-      setAnalyzing(false);
-      return;
-    }
-
-    const prompt = `Student Name: ${student.d.nam}. Results: ${JSON.stringify(student.r)}. Z-Score: ${student.d.zsc}. Stream: ${student.d.sub}. Based on these Sri Lankan A/L results, provide 3 sentences of encouraging career or higher education advice. Use a friendly tone.`;
-
-    try {
-      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`, {
+      const res = await fetch('/api/search', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        body: JSON.stringify({
+          query,
+          examYear,
+          username,
+          password
+        })
       });
-      
-      const data = await response.json();
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text;
-      
-      if (!text) throw new Error("Empty response");
-
-      const newCache = { ...aiCache, [student._uiKey]: text };
-      setAiCache(newCache);
-      localStorage.setItem('ai_analysis_cache', JSON.stringify(newCache));
+      const data = await res.json();
+      if (data.success) {
+        setResults(data.data);
+      }
     } catch (err) {
-      setError("AI Service busy. Please try again.");
-    } finally {
-      setAnalyzing(false);
+      console.error("Search error", err);
     }
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 p-4 md:p-10 font-sans">
-      <div className="max-w-6xl mx-auto">
-        
-        <header className="flex flex-col md:flex-row justify-between items-center mb-10 gap-6">
-          <div className="flex items-center gap-4">
-            <div className="p-3 bg-indigo-600 rounded-2xl shadow-xl"><GraduationCap className="text-white w-8 h-8" /></div>
-            <div>
-              <h1 className="text-2xl font-black text-slate-800 tracking-tight">AL-INSIGHT SL</h1>
-              <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">A/L 2025 Exam Portal</p>
-              <p className="text-slate-500 text-xs font-bold uppercase tracking-widest">BY DARK DEVIL</p>
-            </div>
-          </div>
-          <div className="px-4 py-2 bg-white rounded-full border border-slate-200 shadow-sm flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase">
-            <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-            Live Data Active
-          </div>
-        </header>
+    <div className={`app-container ${darkMode ? 'dark' : 'light'}`}>
+      <canvas ref={canvasRef} className="hacking-canvas" />
 
-        <section className="bg-white p-2 rounded-3xl shadow-xl mb-10 border border-slate-100">
-          <form onSubmit={handleSearch} className="flex items-center">
-            <div className="pl-6 text-slate-300"><Search /></div>
-            <input
-              type="text"
-              placeholder="Enter Name or Index Number..."
-              className="w-full p-4 md:p-6 outline-none text-lg font-medium"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-            <button type="submit" className="bg-indigo-600 text-white px-8 py-4 md:py-5 rounded-2xl font-bold shadow-lg">
-              {loading ? <Loader2 className="animate-spin" /> : "FIND"}
-            </button>
-          </form>
-        </section>
-
-        {error && <div className="mb-6 p-4 bg-red-50 text-red-600 rounded-2xl flex items-center gap-3 text-sm font-bold"><AlertTriangle className="w-4 h-4" /> {error}</div>}
-
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-          <div className="lg:col-span-4 space-y-3">
-            {results.length > 0 && <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2 pb-2">Found {results.length} Matches</p>}
-            {results.map(s => (
-              <div 
-                key={s._uiKey} 
-                onClick={() => setSelectedStudent(s)}
-                className={`p-5 rounded-2xl cursor-pointer transition-all border-2 ${selectedStudent?._uiKey === s._uiKey ? 'bg-indigo-600 border-indigo-600 text-white shadow-lg translate-x-2' : 'bg-white border-transparent hover:border-slate-200 shadow-sm'}`}
-              >
-                <p className="font-bold uppercase text-xs truncate">{s.d.nam}</p>
-                <div className="flex items-center gap-3 mt-1 opacity-60 text-[10px] font-bold">
-                   <span className="flex items-center gap-1"><Calendar className="w-3 h-3"/> {s.d.birthYear}</span>
-                   {/* BUG FIX: Displays the masked index, but uses the _uiKey for React highlight logic */}
-                   <span>INDEX: {s.displayIndex}</span>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="lg:col-span-8">
-            {selectedStudent ? (
-              <div className="bg-white rounded-[2rem] shadow-2xl overflow-hidden border border-slate-50">
-                <div className="p-8 md:p-10 bg-slate-900 text-white">
-                  <div className="flex justify-between items-start mb-4">
-                    <span className="text-[10px] font-black bg-indigo-500 px-3 py-1 rounded-full uppercase">{selectedStudent.d.sub}</span>
-                    <span className="text-[10px] font-bold opacity-50 uppercase tracking-widest">Born: {selectedStudent.d.birthYear}</span>
-                  </div>
-                  <h2 className="text-2xl font-black uppercase mb-8 leading-tight">{selectedStudent.d.nam}</h2>
-                  <div className="grid grid-cols-3 gap-4">
-                    <div className="bg-white/5 p-4 rounded-2xl border border-white/10 text-center">
-                      <p className="text-[9px] uppercase opacity-50 font-black mb-1">Z-Score</p>
-                      <p className="text-2xl font-black text-indigo-400">{selectedStudent.d.zsc}</p>
-                    </div>
-                    <div className="bg-white/5 p-4 rounded-2xl border border-white/10 text-center">
-                      <p className="text-[9px] uppercase opacity-50 font-black mb-1">District Rank</p>
-                      <p className="text-2xl font-black">#{selectedStudent.d.dis}</p>
-                    </div>
-                    <div className="bg-white/5 p-4 rounded-2xl border border-white/10 text-center">
-                      <p className="text-[9px] uppercase opacity-50 font-black mb-1">Island Rank</p>
-                      <p className="text-2xl font-black text-slate-400">#{selectedStudent.d.isl}</p>
-                    </div>
-                  </div>
-                </div>
-                
-                <div className="p-8 md:p-10">
-                  <div className="space-y-2 mb-8">
-                    <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4">Subject Results</h4>
-                    {selectedStudent.r.map((r, i) => (
-                      <div key={i} className="flex justify-between items-center p-4 bg-slate-50 rounded-xl border border-slate-100">
-                        <span className="font-bold text-slate-700 text-xs">{r.s}</span>
-                        <span className={`font-black text-sm ${r.g === 'A' ? 'text-green-600' : 'text-indigo-600'}`}>{r.g}</span>
-                      </div>
-                    ))}
-                  </div>
-
-                  {!aiCache[selectedStudent._uiKey] ? (
-                    <button 
-                      disabled={analyzing}
-                      onClick={() => getAIAnalysis(selectedStudent)}
-                      className="w-full py-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-2xl font-black flex items-center justify-center gap-3 shadow-xl"
-                    >
-                      {analyzing ? <Loader2 className="animate-spin" /> : <BrainCircuit className="w-5 h-5"/>}
-                      {analyzing ? "ANALYZING..." : "GENERATE AI CAREER ADVICE"}
-                    </button>
-                  ) : (
-                    <div className="p-6 bg-indigo-50 rounded-2xl border-2 border-indigo-100 relative overflow-hidden">
-                      <Zap className="absolute -right-4 -top-4 w-20 h-20 text-indigo-100/50 rotate-12" />
-                      <p className="relative z-10 text-indigo-950 font-semibold text-sm leading-relaxed">
-                        {aiCache[selectedStudent._uiKey]}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ) : (
-              <div className="h-64 flex flex-col items-center justify-center bg-white rounded-[2rem] border-2 border-dashed border-slate-200 text-slate-300 p-10 text-center">
-                <Search className="opacity-10 mb-4 w-12 h-12" />
-                <p className="text-sm font-bold uppercase tracking-widest">Search and select a student</p>
-              </div>
-            )}
-          </div>
+      <header className="header">
+        <div className="logo">🛡️ A/L Result Portal</div>
+        <div className="nav-controls">
+          <select value={examYear} onChange={(e) => setExamYear(e.target.value)} className="year-selector">
+            <option value="2025">2025 A/L Exam</option>
+            <option value="2026">2026 A/L Exam</option>
+          </select>
+          <button onClick={() => setDarkMode(!darkMode)} className="theme-toggle">
+            {darkMode ? '☀️ Light' : '🌙 Dark'}
+          </button>
+          <button onClick={() => setShowLogin(!showLogin)} className="admin-toggle-btn">
+            {isLoggedIn ? '🔓 Admin Active' : '🔒 Admin Login'}
+          </button>
         </div>
-      </div>
+      </header>
+
+      {showLogin && !isLoggedIn && (
+        <div className="login-modal">
+          <h3>Special Privileges</h3>
+          <input type="text" placeholder="Username" value={username} onChange={e => setUsername(e.target.value)} />
+          <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} />
+          <button onClick={() => setShowLogin(false)}>Confirm Credentials</button>
+        </div>
+      )}
+
+      <main className="main-content">
+        <h1>Advanced Level Result Portal</h1>
+        <p>Active Exam Database: <strong>{examYear}</strong></p>
+
+        <form onSubmit={handleSearch} className="search-box">
+          <input 
+            type="text" 
+            placeholder="Enter Index Number or NIC..." 
+            value={query} 
+            onChange={(e) => setQuery(e.target.value)} 
+          />
+          <button type="submit">Search Result</button>
+        </form>
+
+        <div className="results-container">
+          {results.map((student, idx) => (
+            <div key={idx} className="result-card">
+              <h2>{student.name}</h2>
+              <div className="meta-grid">
+                <p><strong>Index:</strong> {student.indexNumber}</p>
+                <p><strong>Stream:</strong> {student.stream}</p>
+                <p><strong>Z-Score:</strong> {student.zScore}</p>
+                <p><strong>District Rank:</strong> {student.districtRank}</p>
+                <p><strong>Island Rank:</strong> {student.islandRank}</p>
+              </div>
+
+              <div className="subjects-list">
+                <h4>Subject Results:</h4>
+                <ul>
+                  {student.results?.map((sub, sIdx) => (
+                    <li key={sIdx}><span>{sub.s}</span> <strong>{sub.g}</strong></li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Special Privileges View */}
+              {student.isPrivilegedView && (
+                <div className="privileged-data">
+                  <h4>🔒 Privileged Details</h4>
+                  <p><strong>NIC Number:</strong> {student.nic}</p>
+                  <p><strong>Calculated Birthday:</strong> {student.birthday}</p>
+                  <p><strong>Gender:</strong> {student.gender}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </main>
     </div>
   );
-};
-
-export default App;
+}
