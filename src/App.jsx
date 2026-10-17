@@ -22,7 +22,7 @@ export default function App() {
   const canvasRef = useRef(null);
   const dropdownRef = useRef(null);
 
-  // Close custom dropdown when clicking or touching outside
+  // Close custom dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
