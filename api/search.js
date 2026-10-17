@@ -30,7 +30,7 @@ function parseSriLankanID(nic) {
     days = parseInt(nicStr.substring(2, 5), 10);
   }
 
-  let md = days - 1;
+  let md = days - 2;
   let gender = "Male";
   
   if (md >= 500) {
