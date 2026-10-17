@@ -30,7 +30,7 @@ function parseSriLankanID(nic) {
     days = parseInt(nicStr.substring(2, 5), 10);
   }
 
-  let md = days - 1;
+  let md = days - 2;
   let gender = "Male";
   
   if (md >= 500) {
@@ -58,9 +58,11 @@ export default async function handler(req, res) {
   const ADMIN_PASS = process.env.SPECIAL_PASSWORD || "secret123";
   const isPrivileged = (username === ADMIN_USER && password === ADMIN_PASS);
 
+  // Added 2027 collection mapping
   const validCollections = {
     "2025": "results_2025",
-    "2026": "results_2026"
+    "2026": "results_2026",
+    "2027": "results_2027"
   };
   const collectionName = validCollections[examYear] || "results_2025";
 
@@ -68,7 +70,6 @@ export default async function handler(req, res) {
     const db = await connectToDatabase();
     const collection = db.collection(collectionName);
 
-    // Admin action to toggle hidden status
     if (action === 'toggleHide') {
       if (!isPrivileged) {
         return res.status(403).json({ error: 'Unauthorized action' });
@@ -104,7 +105,6 @@ export default async function handler(req, res) {
 
     const formattedResults = records.map(rawRecord => {
       const fullIndex = String(rawRecord.d?.ind || '');
-      // Normal users see first 3 digits + 4 dots (7 digits total)
       const indexNumber = isPrivileged ? fullIndex : (fullIndex.slice(0, 3) + '••••');
       
       const nicVal = rawRecord.d?.nic ? String(rawRecord.d.nic) : '';
