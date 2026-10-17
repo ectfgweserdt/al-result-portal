@@ -30,7 +30,7 @@ function parseSriLankanID(nic) {
     days = parseInt(nicStr.substring(2, 5), 10);
   }
 
-  let md = days - 2;
+  let md = days - 1;
   let gender = "Male";
   
   if (md >= 500) {
@@ -104,7 +104,7 @@ export default async function handler(req, res) {
 
     const formattedResults = records.map(rawRecord => {
       const fullIndex = String(rawRecord.d?.ind || '');
-      // Mask for normal users: first 3 digits + 4 dots (7 digits total)
+      // Normal users see first 3 digits + 4 dots (7 digits total)
       const indexNumber = isPrivileged ? fullIndex : (fullIndex.slice(0, 3) + '••••');
       
       const nicVal = rawRecord.d?.nic ? String(rawRecord.d.nic) : '';
