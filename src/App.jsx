@@ -6,6 +6,7 @@ export default function App() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
+  const [selectedIdx, setSelectedIdx] = useState(0);
   const [loading, setLoading] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
   
@@ -20,7 +21,7 @@ export default function App() {
 
   const canvasRef = useRef(null);
 
-  // Transparent Matrix Hacking Rain Effect
+  // Deep OLED Hacker Matrix & Gas Animation Effect
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -38,7 +39,7 @@ export default function App() {
     const rainDrops = Array.from({ length: columns }).fill(1);
 
     const render = () => {
-      ctx.fillStyle = 'rgba(3, 7, 18, 0.08)';
+      ctx.fillStyle = 'rgba(1, 3, 8, 0.08)';
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       ctx.fillStyle = '#00ff66'; 
@@ -103,10 +104,19 @@ export default function App() {
           setLoginSuccess("");
         }, 1500);
       } else {
+        // Wrong credentials: pop down and erase details
         setLoginError("Invalid credentials. Access denied.");
+        setUsername("");
+        setPassword("");
+        setTimeout(() => {
+          setShowLoginModal(false);
+          setLoginError("");
+        }, 2000);
       }
     } catch (err) {
       setLoginError("Authorization server error.");
+      setUsername("");
+      setPassword("");
     }
   };
 
@@ -116,6 +126,7 @@ export default function App() {
 
     setLoading(true);
     setHasSearched(true);
+    setSelectedIdx(0);
     try {
       const res = await fetch('/api/search', {
         method: 'POST',
@@ -138,9 +149,12 @@ export default function App() {
     }
   };
 
+  const selectedStudent = results[selectedIdx];
+
   return (
     <div className="app-container">
       <canvas ref={canvasRef} className="hacking-canvas" />
+      <div className="ambient-glow"></div>
 
       <header className="header">
         <div className="logo-area">
@@ -151,7 +165,6 @@ export default function App() {
           </div>
         </div>
         <div className="nav-controls">
-          {/* Custom Animated Dropdown */}
           <div className="custom-dropdown">
             <div className="dropdown-selected" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
               <span>{examYear} Examination</span>
@@ -172,7 +185,6 @@ export default function App() {
         </div>
       </header>
 
-      {/* Already Granted Popup Notification */}
       {alreadyGrantedPopup && (
         <div className="floating-toast">
           <span>⚠️ Access already granted, Administrator. Session active.</span>
@@ -230,68 +242,94 @@ export default function App() {
           </button>
         </form>
 
-        <div className="results-container">
-          {loading && <div className="loading-state">Querying encrypted database...</div>}
+        {loading && <div className="loading-state">Querying encrypted database...</div>}
 
-          {!loading && hasSearched && results.length === 0 && (
-            <div className="no-results-card">
-              <p>No matching record found or record is restricted.</p>
+        {!loading && hasSearched && results.length === 0 && (
+          <div className="no-results-card">
+            <p>No matching record found or record is restricted.</p>
+          </div>
+        )}
+
+        {/* Split Screen Master-Detail Layout */}
+        {!loading && results.length > 0 && (
+          <div className="split-screen-container">
+            {/* Left Side: Student List (Independently Scrollable) */}
+            <div className="left-student-list">
+              <div className="list-header">Search Results ({results.length})</div>
+              {results.map((student, idx) => (
+                <div 
+                  key={idx} 
+                  className={`student-list-item ${selectedIdx === idx ? 'active' : ''}`}
+                  onClick={() => setSelectedIdx(idx)}
+                >
+                  <h4>{student.name}</h4>
+                  <div className="item-sub">
+                    <span>Index: <span className="masked-index">{student.indexNumber}</span></span>
+                    <span className="stream-tag">{student.stream}</span>
+                  </div>
+                </div>
+              ))}
             </div>
-          )}
 
-          {!loading && results.map((student, idx) => (
-            <div key={idx} className="result-card">
-              <div className="student-header">
-                <h3>{student.name}</h3>
-                <span className="index-badge">Index: {student.indexNumber}</span>
-              </div>
+            {/* Right Side: Detailed View (Fixed, Independent of Left Scroll) */}
+            <div className="right-student-detail">
+              {selectedStudent ? (
+                <div className="result-card">
+                  <div className="student-header">
+                    <h3>{selectedStudent.name}</h3>
+                    <span className="index-badge">Index: {selectedStudent.indexNumber}</span>
+                  </div>
 
-              <div className="meta-grid">
-                <div className="meta-item">
-                  <span className="label">Stream</span>
-                  <span className="value">{student.stream}</span>
-                </div>
-                <div className="meta-item">
-                  <span className="label">Z-Score</span>
-                  <span className="value">{student.zScore}</span>
-                </div>
-                <div className="meta-item">
-                  <span className="label">District Rank</span>
-                  <span className="value">{student.districtRank}</span>
-                </div>
-                <div className="meta-item">
-                  <span className="label">Island Rank</span>
-                  <span className="value">{student.islandRank}</span>
-                </div>
-              </div>
-
-              <div className="subjects-section">
-                <h4>Subject Breakdown</h4>
-                <div className="subjects-grid">
-                  {student.results?.map((sub, sIdx) => (
-                    <div key={sIdx} className="subject-item">
-                      <span className="sub-name">{sub.s}</span>
-                      <span className="sub-grade">{sub.g}</span>
+                  <div className="meta-grid">
+                    <div className="meta-item">
+                      <span className="label">Stream</span>
+                      <span className="value">{selectedStudent.stream}</span>
                     </div>
-                  ))}
-                </div>
-              </div>
+                    <div className="meta-item">
+                      <span className="label">Z-Score</span>
+                      <span className="value">{selectedStudent.zScore}</span>
+                    </div>
+                    <div className="meta-item">
+                      <span className="label">District Rank</span>
+                      <span className="value">{selectedStudent.districtRank}</span>
+                    </div>
+                    <div className="meta-item">
+                      <span className="label">Island Rank</span>
+                      <span className="value">{selectedStudent.islandRank}</span>
+                    </div>
+                  </div>
 
-              {student.isPrivilegedView && (
-                <div className="privileged-data-box">
-                  <div className="priv-header">
-                    <span>🔓 Authorized Privileged Decryption</span>
+                  <div className="subjects-section">
+                    <h4>Subject Breakdown</h4>
+                    <div className="subjects-grid">
+                      {selectedStudent.results?.map((sub, sIdx) => (
+                        <div key={sIdx} className="subject-item">
+                          <span className="sub-name">{sub.s}</span>
+                          <span className="sub-grade">{sub.g}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                  <div className="priv-grid">
-                    <p><strong>NIC Number:</strong> {student.nic}</p>
-                    <p><strong>Calculated Birthday:</strong> {student.birthday}</p>
-                    <p><strong>Gender:</strong> {student.gender}</p>
-                  </div>
+
+                  {selectedStudent.isPrivilegedView && (
+                    <div className="privileged-data-box">
+                      <div className="priv-header">
+                        <span>🔓 Authorized Privileged Decryption</span>
+                      </div>
+                      <div className="priv-grid">
+                        <p><strong>NIC Number:</strong> {selectedStudent.nic}</p>
+                        <p><strong>Calculated Birthday:</strong> {selectedStudent.birthday}</p>
+                        <p><strong>Gender:</strong> {selectedStudent.gender}</p>
+                      </div>
+                    </div>
+                  )}
                 </div>
+              ) : (
+                <div className="select-prompt">Select a student record from the left directory.</div>
               )}
             </div>
-          ))}
-        </div>
+          </div>
+        )}
       </main>
 
       <footer className="footer-syndicate">
