@@ -3,6 +3,7 @@ import './App.css';
 
 export default function App() {
   const [examYear, setExamYear] = useState("2025");
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -15,6 +16,7 @@ export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [loginError, setLoginError] = useState("");
   const [loginSuccess, setLoginSuccess] = useState("");
+  const [alreadyGrantedPopup, setAlreadyGrantedPopup] = useState(false);
 
   const canvasRef = useRef(null);
 
@@ -68,20 +70,44 @@ export default function App() {
     };
   }, []);
 
-  const handleLoginSubmit = (e) => {
+  const handleLoginClick = () => {
+    if (isLoggedIn) {
+      setAlreadyGrantedPopup(true);
+      setTimeout(() => setAlreadyGrantedPopup(false), 3500);
+    } else {
+      setShowLoginModal(true);
+    }
+  };
+
+  const handleLoginSubmit = async (e) => {
     e.preventDefault();
     if (!username || !password) {
-      setLoginError("Please enter both username and password.");
+      setLoginError("Please provide credentials.");
       return;
     }
-    // We test credentials with an immediate search trigger or token verification
-    setIsLoggedIn(true);
-    setLoginError("");
-    setLoginSuccess("Privileges unlocked successfully!");
-    setTimeout(() => {
-      setShowLoginModal(false);
-      setLoginSuccess("");
-    }, 1500);
+
+    try {
+      const res = await fetch('/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ query: 'test', examYear, username, password })
+      });
+      const data = await res.json();
+      
+      if (data.isPrivileged) {
+        setIsLoggedIn(true);
+        setLoginError("");
+        setLoginSuccess("Access granted. Privileges unlocked.");
+        setTimeout(() => {
+          setShowLoginModal(false);
+          setLoginSuccess("");
+        }, 1500);
+      } else {
+        setLoginError("Invalid credentials. Access denied.");
+      }
+    } catch (err) {
+      setLoginError("Authorization server error.");
+    }
   };
 
   const handleSearch = async (e) => {
@@ -104,9 +130,6 @@ export default function App() {
       const data = await res.json();
       if (data.success) {
         setResults(data.data);
-        if (data.isPrivileged && username) {
-          setIsLoggedIn(true);
-        }
       }
     } catch (err) {
       console.error("Search error", err);
@@ -123,34 +146,47 @@ export default function App() {
         <div className="logo-area">
           <span className="logo-icon">🛡️</span>
           <div>
-            <h2>National A/L Portal</h2>
-            <p>Advanced Examination Database</p>
+            <h2>National Examination Portal</h2>
+            <p>Secure Academic Directory</p>
           </div>
         </div>
         <div className="nav-controls">
-          <div className="select-wrapper">
-            <select value={examYear} onChange={(e) => setExamYear(e.target.value)} className="year-selector">
-              <option value="2025">2025 Examination</option>
-              <option value="2026">2026 Examination</option>
-            </select>
+          {/* Custom Animated Dropdown */}
+          <div className="custom-dropdown">
+            <div className="dropdown-selected" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
+              <span>{examYear} Examination</span>
+              <span className={`arrow ${isDropdownOpen ? 'open' : ''}`}>▾</span>
+            </div>
+            <div className={`dropdown-menu ${isDropdownOpen ? 'show' : ''}`}>
+              <div onClick={() => { setExamYear("2025"); setIsDropdownOpen(false); }}>2025 Examination</div>
+              <div onClick={() => { setExamYear("2026"); setIsDropdownOpen(false); }}>2026 Examination</div>
+            </div>
           </div>
+
           <button 
-            onClick={() => setShowLoginModal(!showLoginModal)} 
+            onClick={handleLoginClick} 
             className={`admin-toggle-btn ${isLoggedIn ? 'active' : ''}`}
           >
-            {isLoggedIn ? '🔓 Privileges Active' : '🔒 Secure Login'}
+            {isLoggedIn ? '🔓 Privileged Session' : '🔒 Secure Login'}
           </button>
         </div>
       </header>
+
+      {/* Already Granted Popup Notification */}
+      {alreadyGrantedPopup && (
+        <div className="floating-toast">
+          <span>⚠️ Access already granted, Administrator. Session active.</span>
+        </div>
+      )}
 
       {showLoginModal && (
         <div className="modal-backdrop">
           <div className="login-modal">
             <div className="modal-header">
-              <h3>Special Privilege Access</h3>
+              <h3>Administrator Authorization</h3>
               <button className="close-btn" onClick={() => setShowLoginModal(false)}>✕</button>
             </div>
-            <p className="modal-desc">Enter authorization credentials to reveal restricted records, NIC numbers, and calculated birthdates.</p>
+            <p className="modal-desc">Enter security credentials to decrypt privileged student records and identities.</p>
             
             <form onSubmit={handleLoginSubmit} className="login-form">
               <input 
@@ -167,7 +203,7 @@ export default function App() {
               />
               {loginError && <p className="error-text">{loginError}</p>}
               {loginSuccess && <p className="success-text">{loginSuccess}</p>}
-              <button type="submit" className="tactile-btn">Authorize Session</button>
+              <button type="submit" className="tactile-btn">Authenticate</button>
             </form>
           </div>
         </div>
@@ -175,8 +211,8 @@ export default function App() {
 
       <main className="main-content">
         <div className="hero-section">
-          <h1>Examination Result Query System</h1>
-          <p>Target Database Collection: <strong>results_{examYear}</strong></p>
+          <h1>Explore Academic Records</h1>
+          <p>Search by student name, index number, or NIC number.</p>
         </div>
 
         <form onSubmit={handleSearch} className="search-box-container">
@@ -184,7 +220,7 @@ export default function App() {
             <span className="search-icon">🔍</span>
             <input 
               type="text" 
-              placeholder="Enter Index Number (e.g. 5000998) or NIC..." 
+              placeholder="Search name, index, or NIC..." 
               value={query} 
               onChange={(e) => setQuery(e.target.value)} 
             />
@@ -195,11 +231,11 @@ export default function App() {
         </form>
 
         <div className="results-container">
-          {loading && <div className="loading-state">Querying secure database...</div>}
+          {loading && <div className="loading-state">Querying encrypted database...</div>}
 
           {!loading && hasSearched && results.length === 0 && (
             <div className="no-results-card">
-              <p>No matching student record found or record is restricted.</p>
+              <p>No matching record found or record is restricted.</p>
             </div>
           )}
 
@@ -235,17 +271,16 @@ export default function App() {
                   {student.results?.map((sub, sIdx) => (
                     <div key={sIdx} className="subject-item">
                       <span className="sub-name">{sub.s}</span>
-                      <span className={`sub-grade grade-${sub.g}`}>{sub.g}</span>
+                      <span className="sub-grade">{sub.g}</span>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Special Privileged View */}
               {student.isPrivilegedView && (
                 <div className="privileged-data-box">
                   <div className="priv-header">
-                    <span>🔓 Authorized Privileged Insights</span>
+                    <span>🔓 Authorized Privileged Decryption</span>
                   </div>
                   <div className="priv-grid">
                     <p><strong>NIC Number:</strong> {student.nic}</p>
@@ -258,6 +293,10 @@ export default function App() {
           ))}
         </div>
       </main>
+
+      <footer className="footer-syndicate">
+        <p>Secured & Maintained by <strong>Dark Devil</strong> // Elite Syndicate</p>
+      </footer>
     </div>
   );
 }
