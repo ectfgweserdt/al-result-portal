@@ -6,12 +6,11 @@ async function connectToDatabase() {
   if (cachedDb) return cachedDb;
   const client = new MongoClient(process.env.MONGODB_URI);
   await client.connect();
-  const db = client.db('exam_database'); // Connected to your exact database name
+  const db = client.db('exam_database');
   cachedDb = db;
   return db;
 }
 
-// Sri Lankan ID birthday & gender parsing logic
 function parseSriLankanID(nic) {
   let year, days;
   if (!nic || (nic.length !== 12 && nic.length !== 10)) {
@@ -50,12 +49,12 @@ export default async function handler(req, res) {
 
   const { query, examYear, username, password } = req.body;
 
-  // Verify admin credentials against Vercel Environment Variables
   const ADMIN_USER = process.env.SPECIAL_USERNAME || "admin";
   const ADMIN_PASS = process.env.SPECIAL_PASSWORD || "secret123";
+  
+  // Strict verification: random passwords will fail
   const isPrivileged = (username === ADMIN_USER && password === ADMIN_PASS);
 
-  // Map exam year to your MongoDB collection names
   const validCollections = {
     "2025": "results_2025",
     "2026": "results_2026"
@@ -68,15 +67,15 @@ export default async function handler(req, res) {
 
     const cleanQuery = query ? query.trim() : "";
 
-    // Search query matching index number (d.ind) or NIC (d.nic)
+    // Search query matching index number, NIC, or partial/full student name case-insensitively
     let dbQuery = {
       $or: [
         { "d.ind": cleanQuery },
-        { "d.nic": cleanQuery }
+        { "d.nic": cleanQuery },
+        { "d.nam": { $regex: cleanQuery, $options: "i" } }
       ]
     };
 
-    // Hide records marked with `hidden: true` from normal users
     if (!isPrivileged) {
       dbQuery.hidden = { $ne: true };
     }
