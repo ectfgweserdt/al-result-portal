@@ -20,8 +20,20 @@ export default function App() {
   const [alreadyGrantedPopup, setAlreadyGrantedPopup] = useState(false);
 
   const canvasRef = useRef(null);
+  const dropdownRef = useRef(null);
 
-  // Deep OLED Hacker Matrix & Gas Animation Effect
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Deep OLED Hacker Matrix Canvas Effect
   useEffect(() => {
     const canvas = canvasRef.current;
     const ctx = canvas.getContext('2d');
@@ -39,7 +51,7 @@ export default function App() {
     const rainDrops = Array.from({ length: columns }).fill(1);
 
     const render = () => {
-      ctx.fillStyle = 'rgba(1, 3, 8, 0.08)';
+      ctx.fillStyle = 'rgba(1, 3, 6, 0.15)'; // Deep OLED pitch dark background
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       ctx.fillStyle = '#00ff66'; 
@@ -104,7 +116,6 @@ export default function App() {
           setLoginSuccess("");
         }, 1500);
       } else {
-        // Wrong credentials: pop down and erase details
         setLoginError("Invalid credentials. Access denied.");
         setUsername("");
         setPassword("");
@@ -149,6 +160,30 @@ export default function App() {
     }
   };
 
+  const toggleHideStudent = async (targetIndex, currentHiddenStatus) => {
+    try {
+      const res = await fetch('/api/search', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'toggleHide',
+          examYear,
+          username,
+          password,
+          targetIndex,
+          hiddenStatus: !currentHiddenStatus
+        })
+      });
+      const data = await res.json();
+      if (data.success) {
+        // Refresh search results locally
+        setResults(prev => prev.map(s => s.fullIndex === targetIndex ? { ...s, hidden: !currentHiddenStatus } : s));
+      }
+    } catch (err) {
+      console.error("Toggle hide error", err);
+    }
+  };
+
   const selectedStudent = results[selectedIdx];
 
   return (
@@ -158,14 +193,15 @@ export default function App() {
 
       <header className="header">
         <div className="logo-area">
-          <span className="logo-icon">🛡️</span>
+          <svg className="css-icon shield-icon" viewBox="0 0 24 24" width="26" height="26" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
           <div>
             <h2>National Examination Portal</h2>
             <p>Secure Academic Directory</p>
           </div>
         </div>
         <div className="nav-controls">
-          <div className="custom-dropdown">
+          {/* Custom Animated Dropdown with Click-Outside Ref */}
+          <div className="custom-dropdown" ref={dropdownRef}>
             <div className="dropdown-selected" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
               <span>{examYear} Examination</span>
               <span className={`arrow ${isDropdownOpen ? 'open' : ''}`}>▾</span>
@@ -191,9 +227,10 @@ export default function App() {
         </div>
       )}
 
+      {/* Modal Backdrop: Clicking outside modal closes it */}
       {showLoginModal && (
-        <div className="modal-backdrop">
-          <div className="login-modal">
+        <div className="modal-backdrop" onClick={() => setShowLoginModal(false)}>
+          <div className="login-modal" onClick={e => e.stopPropagation()}>
             <div className="modal-header">
               <h3>Administrator Authorization</h3>
               <button className="close-btn" onClick={() => setShowLoginModal(false)}>✕</button>
@@ -229,7 +266,7 @@ export default function App() {
 
         <form onSubmit={handleSearch} className="search-box-container">
           <div className="search-input-wrapper">
-            <span className="search-icon">🔍</span>
+            <svg className="css-icon search-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             <input 
               type="text" 
               placeholder="Search name, index, or NIC..." 
@@ -250,19 +287,19 @@ export default function App() {
           </div>
         )}
 
-        {/* Split Screen Master-Detail Layout */}
+        {/* Master-Detail Split Screen Layout */}
         {!loading && results.length > 0 && (
           <div className="split-screen-container">
-            {/* Left Side: Student List (Independently Scrollable) */}
+            {/* Left Side: Student List */}
             <div className="left-student-list">
               <div className="list-header">Search Results ({results.length})</div>
               {results.map((student, idx) => (
                 <div 
                   key={idx} 
-                  className={`student-list-item ${selectedIdx === idx ? 'active' : ''}`}
+                  className={`student-list-item ${selectedIdx === idx ? 'active' : ''} ${student.hidden ? 'hidden-item' : ''}`}
                   onClick={() => setSelectedIdx(idx)}
                 >
-                  <h4>{student.name}</h4>
+                  <h4>{student.name} {student.hidden && <span className="hidden-tag">[HIDDEN]</span>}</h4>
                   <div className="item-sub">
                     <span>Index: <span className="masked-index">{student.indexNumber}</span></span>
                     <span className="stream-tag">{student.stream}</span>
@@ -271,7 +308,7 @@ export default function App() {
               ))}
             </div>
 
-            {/* Right Side: Detailed View (Fixed, Independent of Left Scroll) */}
+            {/* Right Side: Detailed View */}
             <div className="right-student-detail">
               {selectedStudent ? (
                 <div className="result-card">
@@ -314,12 +351,20 @@ export default function App() {
                   {selectedStudent.isPrivilegedView && (
                     <div className="privileged-data-box">
                       <div className="priv-header">
-                        <span>🔓 Authorized Privileged Decryption</span>
+                        <span>🔓 Authorized Privileged Decryption & Controls</span>
                       </div>
                       <div className="priv-grid">
                         <p><strong>NIC Number:</strong> {selectedStudent.nic}</p>
                         <p><strong>Calculated Birthday:</strong> {selectedStudent.birthday}</p>
                         <p><strong>Gender:</strong> {selectedStudent.gender}</p>
+                        <div className="admin-action-row">
+                          <button 
+                            className={`hide-toggle-btn ${selectedStudent.hidden ? 'unhide' : 'hide'}`}
+                            onClick={() => toggleHideStudent(selectedStudent.fullIndex, selectedStudent.hidden)}
+                          >
+                            {selectedStudent.hidden ? '👁️ Unhide from Public Search' : '🔒 Hide from Public Search'}
+                          </button>
+                        </div>
                       </div>
                     </div>
                   )}
@@ -333,7 +378,9 @@ export default function App() {
       </main>
 
       <footer className="footer-syndicate">
-        <p>Secured & Maintained by <strong>Dark Devil</strong> // Elite Syndicate</p>
+        <div className="scared-footer-text">
+          <span>Executed & Controlled by</span> <span className="glitch-nickname">Dark Devil</span>
+        </div>
       </footer>
     </div>
   );
