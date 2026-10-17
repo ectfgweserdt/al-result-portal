@@ -6,12 +6,12 @@ async function connectToDatabase() {
   if (cachedDb) return cachedDb;
   const client = new MongoClient(process.env.MONGODB_URI);
   await client.connect();
-  const db = client.db('exam_database'); // Change to your MongoDB database name if different
+  const db = client.db('exam_database'); // Connected to your exact database name
   cachedDb = db;
   return db;
 }
 
-// Sri Lankan ID birthday and gender parsing logic
+// Sri Lankan ID birthday & gender parsing logic
 function parseSriLankanID(nic) {
   let year, days;
   if (!nic || (nic.length !== 12 && nic.length !== 10)) {
@@ -50,12 +50,12 @@ export default async function handler(req, res) {
 
   const { query, examYear, username, password } = req.body;
 
-  // Check admin privileges against Vercel Environment Variables
-  const ADMIN_USER = process.env.SPECIAL_USERNAME;
-  const ADMIN_PASS = process.env.SPECIAL_PASSWORD;
+  // Verify admin credentials against Vercel Environment Variables
+  const ADMIN_USER = process.env.SPECIAL_USERNAME || "admin";
+  const ADMIN_PASS = process.env.SPECIAL_PASSWORD || "secret123";
   const isPrivileged = (username === ADMIN_USER && password === ADMIN_PASS);
 
-  // Map exam year to MongoDB collection names
+  // Map exam year to your MongoDB collection names
   const validCollections = {
     "2025": "results_2025",
     "2026": "results_2026"
@@ -66,11 +66,13 @@ export default async function handler(req, res) {
     const db = await connectToDatabase();
     const collection = db.collection(collectionName);
 
+    const cleanQuery = query ? query.trim() : "";
+
     // Search query matching index number (d.ind) or NIC (d.nic)
     let dbQuery = {
       $or: [
-        { "d.ind": query },
-        { "d.nic": query }
+        { "d.ind": cleanQuery },
+        { "d.nic": cleanQuery }
       ]
     };
 
@@ -81,7 +83,6 @@ export default async function handler(req, res) {
 
     const records = await collection.find(dbQuery).toArray();
 
-    // Format records to match your database schema (`d` and `r`)
     const formattedResults = records.map(rawRecord => {
       const idInfo = parseSriLankanID(rawRecord.d.nic);
       
@@ -94,7 +95,6 @@ export default async function handler(req, res) {
         islandRank: rawRecord.d.isl,
         results: rawRecord.r,
         
-        // Sensitive fields only revealed if privileged login succeeds
         nic: isPrivileged ? rawRecord.d.nic : null,
         birthday: isPrivileged ? idInfo.birthday : null,
         gender: isPrivileged ? idInfo.gender : null,
@@ -102,7 +102,11 @@ export default async function handler(req, res) {
       };
     });
 
-    return res.status(200).json({ success: true, data: formattedResults });
+    return res.status(200).json({ 
+      success: true, 
+      data: formattedResults, 
+      isPrivileged 
+    });
   } catch (error) {
     console.error("Database search error:", error);
     return res.status(500).json({ error: 'Database search failed' });
