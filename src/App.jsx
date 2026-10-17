@@ -3,7 +3,6 @@ import './App.css';
 
 export default function App() {
   const [examYear, setExamYear] = useState("2025");
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -20,22 +19,6 @@ export default function App() {
   const [alreadyGrantedPopup, setAlreadyGrantedPopup] = useState(false);
 
   const canvasRef = useRef(null);
-  const dropdownRef = useRef(null);
-
-  // Close dropdown menu when clicking or touching outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
-    };
-  }, []);
 
   // Matrix Falling Symbols Canvas Effect
   useEffect(() => {
@@ -87,11 +70,6 @@ export default function App() {
       window.removeEventListener('resize', handleResize);
     };
   }, []);
-
-  const selectYear = (year) => {
-    setExamYear(year);
-    setIsDropdownOpen(false);
-  };
 
   const handleLoginClick = () => {
     if (isLoggedIn) {
@@ -208,39 +186,24 @@ export default function App() {
             <p>Secure Academic Directory</p>
           </div>
         </div>
-        <div className="nav-controls">
-          
-          {/* Custom Glass Dropdown with Direct Touch/Click Event Binding */}
-          <div className="custom-glass-dropdown" ref={dropdownRef}>
-            <button 
-              type="button"
-              className="glass-dropdown-selected" 
-              onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            >
-              <span>{examYear} Examination</span>
-              <span className={`arrow ${isDropdownOpen ? 'open' : ''}`}>▾</span>
-            </button>
 
-            {isDropdownOpen && (
-              <div className="glass-dropdown-menu">
-                <button
-                  type="button"
-                  className="glass-dropdown-item"
-                  onClick={() => selectYear("2025")}
-                  onTouchEnd={(e) => { e.preventDefault(); selectYear("2025"); }}
-                >
-                  2025 Examination
-                </button>
-                <button
-                  type="button"
-                  className="glass-dropdown-item"
-                  onClick={() => selectYear("2026")}
-                  onTouchEnd={(e) => { e.preventDefault(); selectYear("2026"); }}
-                >
-                  2026 Examination
-                </button>
-              </div>
-            )}
+        <div className="nav-controls">
+          {/* Cyber Year Selector Buttons (Zero dropdown clipping bugs) */}
+          <div className="year-tabs">
+            <button 
+              type="button" 
+              className={`year-tab ${examYear === '2025' ? 'active' : ''}`}
+              onClick={() => setExamYear('2025')}
+            >
+              2025
+            </button>
+            <button 
+              type="button" 
+              className={`year-tab ${examYear === '2026' ? 'active' : ''}`}
+              onClick={() => setExamYear('2026')}
+            >
+              2026
+            </button>
           </div>
 
           <button 
@@ -291,7 +254,7 @@ export default function App() {
       <main className="main-content">
         <div className="hero-section">
           <h1>Explore Academic Records</h1>
-          <p>Search by student name, index number, or NIC number.</p>
+          <p>Target Collection: <strong>results_{examYear}</strong></p>
         </div>
 
         <form onSubmit={handleSearch} className="search-box-container">
