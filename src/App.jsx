@@ -182,8 +182,8 @@ export default function App() {
         <div className="logo-area">
           <svg className="css-icon shield-icon" viewBox="0 0 24 24" width="26" height="26" stroke="currentColor" strokeWidth="2" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
           <div>
-            <h2>National Examination Portal</h2>
-            <p>Secure Academic Directory</p>
+            <h2>A/L Result Searching Portal</h2>
+            <p>Fuck C.G. Of Doenets</p>
           </div>
         </div>
 
@@ -260,8 +260,8 @@ export default function App() {
 
       <main className="main-content">
         <div className="hero-section">
-          <h1>Explore Academic Records</h1>
-          <p>Target Collection: <strong>results_{examYear}</strong></p>
+          <h1>Advanced Level Result Lookup</h1>
+          <p>Year : <strong>{examYear}</strong></p>
         </div>
 
         <form onSubmit={handleSearch} className="search-box-container">
@@ -354,7 +354,7 @@ export default function App() {
                       </div>
                       <div className="priv-grid">
                         <p><strong>NIC Number:</strong> {selectedStudent.nic}</p>
-                        <p><strong>Calculated Birthday:</strong> {selectedStudent.birthday}</p>
+                        <p><strong>Birthday:</strong> {selectedStudent.birthday}</p>
                         <p><strong>Gender:</strong> {selectedStudent.gender}</p>
                         <div className="admin-action-row">
                           <button 
