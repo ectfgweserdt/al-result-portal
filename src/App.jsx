@@ -188,7 +188,7 @@ export default function App() {
         </div>
 
         <div className="nav-controls">
-          {/* Cyber Year Selector Buttons (Zero dropdown clipping bugs) */}
+          {/* Cyber Year Selector Buttons for 2025, 2026, and 2027 */}
           <div className="year-tabs">
             <button 
               type="button" 
@@ -203,6 +203,13 @@ export default function App() {
               onClick={() => setExamYear('2026')}
             >
               2026
+            </button>
+            <button 
+              type="button" 
+              className={`year-tab ${examYear === '2027' ? 'active' : ''}`}
+              onClick={() => setExamYear('2027')}
+            >
+              2027
             </button>
           </div>
 
