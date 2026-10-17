@@ -1,0 +1,160 @@
+body, html {
+  margin: 0;
+  padding: 0;
+  font-family: 'Inter', sans-serif;
+  overflow-x: hidden;
+}
+
+.app-container {
+  min-height: 100vh;
+  position: relative;
+  transition: background 0.3s, color 0.3s;
+}
+
+.app-container.dark {
+  background-color: #070913;
+  color: #e2e8f0;
+}
+
+.app-container.light {
+  background-color: #f8fafc;
+  color: #0f172a;
+}
+
+.hacking-canvas {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  pointer-events: none;
+  z-index: 1;
+  opacity: 0.2;
+}
+
+.header, .main-content, .login-modal {
+  position: relative;
+  z-index: 2;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 40px;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.logo {
+  font-weight: 700;
+  font-size: 1.2rem;
+}
+
+.nav-controls {
+  display: flex;
+  gap: 12px;
+}
+
+.year-selector, .theme-toggle, .admin-toggle-btn, .search-box button, .login-modal button {
+  padding: 10px 16px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  cursor: pointer;
+  font-weight: 600;
+  backdrop-filter: blur(8px);
+  transition: all 0.2s;
+}
+
+.year-selector option {
+  background: #111;
+  color: #fff;
+}
+
+.main-content {
+  max-width: 750px;
+  margin: 50px auto;
+  text-align: center;
+  padding: 0 20px;
+}
+
+.search-box {
+  display: flex;
+  gap: 10px;
+  margin-top: 25px;
+}
+
+.search-box input {
+  flex: 1;
+  padding: 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.04);
+  color: inherit;
+  font-size: 16px;
+  backdrop-filter: blur(8px);
+}
+
+.login-modal {
+  max-width: 320px;
+  margin: 20px auto;
+  padding: 20px;
+  background: rgba(10, 15, 30, 0.85);
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  backdrop-filter: blur(15px);
+  border: 1px solid rgba(0, 255, 102, 0.4);
+}
+
+.login-modal input {
+  padding: 10px;
+  border-radius: 6px;
+  border: 1px solid #333;
+  background: #111;
+  color: #fff;
+}
+
+.result-card {
+  margin-top: 25px;
+  padding: 25px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: left;
+  backdrop-filter: blur(12px);
+}
+
+.meta-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin: 15px 0;
+  font-size: 0.95rem;
+}
+
+.subjects-list ul {
+  list-style: none;
+  padding: 0;
+  margin: 10px 0;
+}
+
+.subjects-list li {
+  display: flex;
+  justify-content: space-between;
+  padding: 6px 10px;
+  margin-bottom: 4px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+}
+
+.privileged-data {
+  margin-top: 15px;
+  padding: 15px;
+  border-radius: 8px;
+  background: rgba(0, 255, 102, 0.06);
+  border: 1px dashed #00ff66;
+}
