@@ -30,12 +30,17 @@ export default function App() {
       }
     };
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
   }, []);
 
-  // Deep OLED Hacker Matrix Canvas Effect
+  // Matrix Falling Symbols on Pure OLED Dark Canvas
   useEffect(() => {
     const canvas = canvasRef.current;
+    if (!canvas) return;
     const ctx = canvas.getContext('2d');
     let animationFrameId;
 
@@ -47,11 +52,12 @@ export default function App() {
     const alphabet = katakana + latin;
 
     const fontSize = 15;
-    const columns = canvas.width / fontSize;
+    const columns = Math.floor(canvas.width / fontSize);
     const rainDrops = Array.from({ length: columns }).fill(1);
 
     const render = () => {
-      ctx.fillStyle = 'rgba(1, 3, 6, 0.15)'; // Deep OLED pitch dark background
+      // Clear with pure deep dark color - NO WHITE FLASH
+      ctx.fillStyle = 'rgba(1, 3, 8, 0.18)'; 
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
       ctx.fillStyle = '#00ff66'; 
@@ -176,7 +182,6 @@ export default function App() {
       });
       const data = await res.json();
       if (data.success) {
-        // Refresh search results locally
         setResults(prev => prev.map(s => s.fullIndex === targetIndex ? { ...s, hidden: !currentHiddenStatus } : s));
       }
     } catch (err) {
@@ -193,23 +198,37 @@ export default function App() {
 
       <header className="header">
         <div className="logo-area">
-          <svg className="css-icon shield-icon" viewBox="0 0 24 24" width="26" height="26" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
+          <svg className="css-icon shield-icon" viewBox="0 0 24 24" width="26" height="26" stroke="currentColor" strokeWidth="2" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
           <div>
             <h2>National Examination Portal</h2>
             <p>Secure Academic Directory</p>
           </div>
         </div>
         <div className="nav-controls">
-          {/* Custom Animated Dropdown with Click-Outside Ref */}
+          {/* Custom Dropdown with fixed touch/click selection */}
           <div className="custom-dropdown" ref={dropdownRef}>
             <div className="dropdown-selected" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
               <span>{examYear} Examination</span>
               <span className={`arrow ${isDropdownOpen ? 'open' : ''}`}>▾</span>
             </div>
-            <div className={`dropdown-menu ${isDropdownOpen ? 'show' : ''}`}>
-              <div onClick={() => { setExamYear("2025"); setIsDropdownOpen(false); }}>2025 Examination</div>
-              <div onClick={() => { setExamYear("2026"); setIsDropdownOpen(false); }}>2026 Examination</div>
-            </div>
+            {isDropdownOpen && (
+              <div className="dropdown-menu">
+                <button 
+                  type="button" 
+                  className="dropdown-item" 
+                  onClick={() => { setExamYear("2025"); setIsDropdownOpen(false); }}
+                >
+                  2025 Examination
+                </button>
+                <button 
+                  type="button" 
+                  className="dropdown-item" 
+                  onClick={() => { setExamYear("2026"); setIsDropdownOpen(false); }}
+                >
+                  2026 Examination
+                </button>
+              </div>
+            )}
           </div>
 
           <button 
@@ -227,7 +246,6 @@ export default function App() {
         </div>
       )}
 
-      {/* Modal Backdrop: Clicking outside modal closes it */}
       {showLoginModal && (
         <div className="modal-backdrop" onClick={() => setShowLoginModal(false)}>
           <div className="login-modal" onClick={e => e.stopPropagation()}>
@@ -266,7 +284,7 @@ export default function App() {
 
         <form onSubmit={handleSearch} className="search-box-container">
           <div className="search-input-wrapper">
-            <svg className="css-icon search-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+            <svg className="css-icon search-icon" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" strokeWidth="2" fill="none"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             <input 
               type="text" 
               placeholder="Search name, index, or NIC..." 
@@ -287,10 +305,9 @@ export default function App() {
           </div>
         )}
 
-        {/* Master-Detail Split Screen Layout */}
         {!loading && results.length > 0 && (
           <div className="split-screen-container">
-            {/* Left Side: Student List */}
+            {/* Left Column: Student List */}
             <div className="left-student-list">
               <div className="list-header">Search Results ({results.length})</div>
               {results.map((student, idx) => (
@@ -308,7 +325,7 @@ export default function App() {
               ))}
             </div>
 
-            {/* Right Side: Detailed View */}
+            {/* Right Column: Student Result Sheet */}
             <div className="right-student-detail">
               {selectedStudent ? (
                 <div className="result-card">
