@@ -52,7 +52,7 @@ export default async function handler(req, res) {
     return res.status(405).json({ error: 'Method not allowed' });
   }
 
-  const { query, examYear, username, password } = req.body;
+  const { action, query, examYear, username, password, targetIndex, hiddenStatus } = req.body;
 
   const ADMIN_USER = process.env.SPECIAL_USERNAME || "admin";
   const ADMIN_PASS = process.env.SPECIAL_PASSWORD || "secret123";
@@ -68,13 +68,25 @@ export default async function handler(req, res) {
     const db = await connectToDatabase();
     const collection = db.collection(collectionName);
 
+    // Handle Admin Action to Hide/Unhide a student from public search
+    if (action === 'toggleHide') {
+      if (!isPrivileged) {
+        return res.status(403).json({ error: 'Unauthorized privilege action' });
+      }
+      await collection.updateOne(
+        { "d.ind": targetIndex },
+        { $set: { hidden: hiddenStatus } }
+      );
+      return res.status(200).json({ success: true, message: `Student status updated to hidden: ${hiddenStatus}` });
+    }
+
     const cleanQuery = query ? query.trim() : "";
     const numericQuery = !isNaN(cleanQuery) && cleanQuery !== "" ? Number(cleanQuery) : null;
 
     let searchConditions = [
       { "d.ind": cleanQuery },
       { "d.nic": cleanQuery },
-      { "d.nam": { $regex: cleanQuery, $options: "i" } }
+      { "d.nam": { $regex: cleanQuery,$options: "i" } }
     ];
 
     if (numericQuery !== null) {
@@ -92,20 +104,22 @@ export default async function handler(req, res) {
 
     const formattedResults = records.map(rawRecord => {
       const fullIndex = String(rawRecord.d?.ind || '');
-      // Normal users see only first 3 numbers + animated hacker dots
-      const indexNumber = isPrivileged ? fullIndex : (fullIndex.slice(0, 3) + '••••••');
+      // Normal users see first 3 digits + 4 dots (since 7 digits total)
+      const indexNumber = isPrivileged ? fullIndex : (fullIndex.slice(0, 3) + '••••');
       
       const nicVal = rawRecord.d?.nic ? String(rawRecord.d.nic) : '';
       const idInfo = parseSriLankanID(nicVal);
       
       return {
         indexNumber,
+        fullIndex, // kept internally for admin actions
         name: rawRecord.d?.nam,
         stream: rawRecord.d?.sub,
-        zScore: rawRecord.d?.['z -'],
+        zScore: rawRecord.d['z -'],
         districtRank: rawRecord.d?.dis,
         islandRank: rawRecord.d?.isl,
         results: rawRecord.r || [],
+        hidden: !!rawRecord.hidden,
         
         nic: isPrivileged ? nicVal : null,
         birthday: isPrivileged ? idInfo.birthday : null,
