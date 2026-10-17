@@ -6,7 +6,7 @@ async function connectToDatabase() {
   if (cachedDb) return cachedDb;
   const client = new MongoClient(process.env.MONGODB_URI);
   await client.connect();
-  const db = client.db('al_results_db'); // Change to your MongoDB database name if different
+  const db = client.db('exam_database'); // Change to your MongoDB database name if different
   cachedDb = db;
   return db;
 }
@@ -51,8 +51,8 @@ export default async function handler(req, res) {
   const { query, examYear, username, password } = req.body;
 
   // Check admin privileges against Vercel Environment Variables
-  const ADMIN_USER = process.env.SPECIAL_USERNAME || "admin";
-  const ADMIN_PASS = process.env.SPECIAL_PASSWORD || "secret123";
+  const ADMIN_USER = process.env.SPECIAL_USERNAME;
+  const ADMIN_PASS = process.env.SPECIAL_PASSWORD;
   const isPrivileged = (username === ADMIN_USER && password === ADMIN_PASS);
 
   // Map exam year to MongoDB collection names
