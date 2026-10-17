@@ -22,7 +22,7 @@ export default function App() {
   const canvasRef = useRef(null);
   const dropdownRef = useRef(null);
 
-  // Close custom dropdown when clicking or touching outside
+  // Close dropdown menu when clicking or touching outside
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
@@ -37,7 +37,7 @@ export default function App() {
     };
   }, []);
 
-  // Matrix Falling Symbols on Pure OLED Dark Canvas
+  // Matrix Falling Symbols Canvas Effect
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -87,6 +87,11 @@ export default function App() {
       window.removeEventListener('resize', handleResize);
     };
   }, []);
+
+  const selectYear = (year) => {
+    setExamYear(year);
+    setIsDropdownOpen(false);
+  };
 
   const handleLoginClick = () => {
     if (isLoggedIn) {
@@ -205,30 +210,35 @@ export default function App() {
         </div>
         <div className="nav-controls">
           
-          {/* Custom Modern Glass Theme Dropdown Menu */}
+          {/* Custom Glass Dropdown with Direct Touch/Click Event Binding */}
           <div className="custom-glass-dropdown" ref={dropdownRef}>
-            <div 
+            <button 
+              type="button"
               className="glass-dropdown-selected" 
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
             >
               <span>{examYear} Examination</span>
               <span className={`arrow ${isDropdownOpen ? 'open' : ''}`}>▾</span>
-            </div>
+            </button>
 
             {isDropdownOpen && (
               <div className="glass-dropdown-menu">
-                <div 
+                <button
+                  type="button"
                   className="glass-dropdown-item"
-                  onClick={() => { setExamYear("2025"); setIsDropdownOpen(false); }}
+                  onClick={() => selectYear("2025")}
+                  onTouchEnd={(e) => { e.preventDefault(); selectYear("2025"); }}
                 >
                   2025 Examination
-                </div>
-                <div 
+                </button>
+                <button
+                  type="button"
                   className="glass-dropdown-item"
-                  onClick={() => { setExamYear("2026"); setIsDropdownOpen(false); }}
+                  onClick={() => selectYear("2026")}
+                  onTouchEnd={(e) => { e.preventDefault(); selectYear("2026"); }}
                 >
                   2026 Examination
-                </div>
+                </button>
               </div>
             )}
           </div>
