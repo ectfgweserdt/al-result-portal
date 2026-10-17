@@ -3,7 +3,6 @@ import './App.css';
 
 export default function App() {
   const [examYear, setExamYear] = useState("2025");
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
   const [selectedIdx, setSelectedIdx] = useState(0);
@@ -20,22 +19,6 @@ export default function App() {
   const [alreadyGrantedPopup, setAlreadyGrantedPopup] = useState(false);
 
   const canvasRef = useRef(null);
-  const dropdownRef = useRef(null);
-
-  // Close dropdown when clicking outside
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    document.addEventListener("mousedown", handleClickOutside);
-    document.addEventListener("touchstart", handleClickOutside);
-    return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
-      document.removeEventListener("touchstart", handleClickOutside);
-    };
-  }, []);
 
   // Matrix Falling Symbols on Pure OLED Dark Canvas
   useEffect(() => {
@@ -56,7 +39,6 @@ export default function App() {
     const rainDrops = Array.from({ length: columns }).fill(1);
 
     const render = () => {
-      // Clear with pure deep dark color - NO WHITE FLASH
       ctx.fillStyle = 'rgba(1, 3, 8, 0.18)'; 
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
@@ -205,30 +187,16 @@ export default function App() {
           </div>
         </div>
         <div className="nav-controls">
-          {/* Custom Dropdown with fixed touch/click selection */}
-          <div className="custom-dropdown" ref={dropdownRef}>
-            <div className="dropdown-selected" onClick={() => setIsDropdownOpen(!isDropdownOpen)}>
-              <span>{examYear} Examination</span>
-              <span className={`arrow ${isDropdownOpen ? 'open' : ''}`}>▾</span>
-            </div>
-            {isDropdownOpen && (
-              <div className="dropdown-menu">
-                <button 
-                  type="button" 
-                  className="dropdown-item" 
-                  onClick={() => { setExamYear("2025"); setIsDropdownOpen(false); }}
-                >
-                  2025 Examination
-                </button>
-                <button 
-                  type="button" 
-                  className="dropdown-item" 
-                  onClick={() => { setExamYear("2026"); setIsDropdownOpen(false); }}
-                >
-                  2026 Examination
-                </button>
-              </div>
-            )}
+          {/* Native HTML Select styled with cyberpunk UI for 100% mobile compatibility */}
+          <div className="native-select-wrapper">
+            <select 
+              value={examYear} 
+              onChange={(e) => setExamYear(e.target.value)}
+              className="cyber-select"
+            >
+              <option value="2025">2025 Examination</option>
+              <option value="2026">2026 Examination</option>
+            </select>
           </div>
 
           <button 
