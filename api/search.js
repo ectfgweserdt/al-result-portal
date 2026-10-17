@@ -4,7 +4,11 @@ let cachedDb = null;
 
 async function connectToDatabase() {
   if (cachedDb) return cachedDb;
-  const client = new MongoClient(process.env.MONGO_URI);
+  const uri = process.env.MONGO_URI || process.env.MONGODB_URI;
+  if (!uri) {
+    throw new Error("MONGO_URI environment variable is missing.");
+  }
+  const client = new MongoClient(uri);
   await client.connect();
   const db = client.db('exam_database');
   cachedDb = db;
@@ -13,16 +17,17 @@ async function connectToDatabase() {
 
 function parseSriLankanID(nic) {
   let year, days;
-  if (!nic || (nic.length !== 12 && nic.length !== 10)) {
+  const nicStr = String(nic || '');
+  if (nicStr.length !== 12 && nicStr.length !== 10) {
     return { birthday: 'N/A', gender: 'N/A' };
   }
   
-  if (nic.length === 12) {
-    year = parseInt(nic.substring(0, 4), 10);
-    days = parseInt(nic.substring(4, 7), 10);
+  if (nicStr.length === 12) {
+    year = parseInt(nicStr.substring(0, 4), 10);
+    days = parseInt(nicStr.substring(4, 7), 10);
   } else {
-    year = parseInt("19" + nic.substring(0, 2), 10);
-    days = parseInt(nic.substring(2, 5), 10);
+    year = parseInt("19" + nicStr.substring(0, 2), 10);
+    days = parseInt(nicStr.substring(2, 5), 10);
   }
 
   let md = days - 1;
@@ -51,8 +56,6 @@ export default async function handler(req, res) {
 
   const ADMIN_USER = process.env.SPECIAL_USERNAME || "admin";
   const ADMIN_PASS = process.env.SPECIAL_PASSWORD || "secret123";
-  
-  // Strict verification: random passwords will fail
   const isPrivileged = (username === ADMIN_USER && password === ADMIN_PASS);
 
   const validCollections = {
@@ -66,15 +69,20 @@ export default async function handler(req, res) {
     const collection = db.collection(collectionName);
 
     const cleanQuery = query ? query.trim() : "";
+    const numericQuery = !isNaN(cleanQuery) && cleanQuery !== "" ? Number(cleanQuery) : null;
 
-    // Search query matching index number, NIC, or partial/full student name case-insensitively
-    let dbQuery = {
-      $or: [
-        { "d.ind": cleanQuery },
-        { "d.nic": cleanQuery },
-        { "d.nam": { $regex: cleanQuery, $options: "i" } }
-      ]
-    };
+    let searchConditions = [
+      { "d.ind": cleanQuery },
+      { "d.nic": cleanQuery },
+      { "d.nam": { $regex: cleanQuery, $options: "i" } }
+    ];
+
+    if (numericQuery !== null) {
+      searchConditions.push({ "d.ind": numericQuery });
+      searchConditions.push({ "d.nic": numericQuery });
+    }
+
+    let dbQuery = { $or: searchConditions };
 
     if (!isPrivileged) {
       dbQuery.hidden = { $ne: true };
@@ -83,18 +91,23 @@ export default async function handler(req, res) {
     const records = await collection.find(dbQuery).toArray();
 
     const formattedResults = records.map(rawRecord => {
-      const idInfo = parseSriLankanID(rawRecord.d.nic);
+      const fullIndex = String(rawRecord.d?.ind || '');
+      // Normal users see only first 3 numbers + animated hacker dots
+      const indexNumber = isPrivileged ? fullIndex : (fullIndex.slice(0, 3) + '••••••');
+      
+      const nicVal = rawRecord.d?.nic ? String(rawRecord.d.nic) : '';
+      const idInfo = parseSriLankanID(nicVal);
       
       return {
-        indexNumber: rawRecord.d.ind,
-        name: rawRecord.d.nam,
-        stream: rawRecord.d.sub,
-        zScore: rawRecord.d['z -'],
-        districtRank: rawRecord.d.dis,
-        islandRank: rawRecord.d.isl,
-        results: rawRecord.r,
+        indexNumber,
+        name: rawRecord.d?.nam,
+        stream: rawRecord.d?.sub,
+        zScore: rawRecord.d?.['z -'],
+        districtRank: rawRecord.d?.dis,
+        islandRank: rawRecord.d?.isl,
+        results: rawRecord.r || [],
         
-        nic: isPrivileged ? rawRecord.d.nic : null,
+        nic: isPrivileged ? nicVal : null,
         birthday: isPrivileged ? idInfo.birthday : null,
         gender: isPrivileged ? idInfo.gender : null,
         isPrivilegedView: isPrivileged
@@ -107,7 +120,7 @@ export default async function handler(req, res) {
       isPrivileged 
     });
   } catch (error) {
-    console.error("Database search error:", error);
-    return res.status(500).json({ error: 'Database search failed' });
+    console.error("Database search critical error:", error);
+    return res.status(500).json({ error: error.message || 'Database search failed' });
   }
 }
