@@ -30,7 +30,7 @@ function parseSriLankanID(nic) {
     days = parseInt(nicStr.substring(2, 5), 10);
   }
 
-  let md = days - 2;
+  let md = days - 1;
   let gender = "Male";
   
   if (md >= 500) {
@@ -68,16 +68,16 @@ export default async function handler(req, res) {
     const db = await connectToDatabase();
     const collection = db.collection(collectionName);
 
-    // Handle Admin Action to Hide/Unhide a student from public search
+    // Admin action to toggle hidden status
     if (action === 'toggleHide') {
       if (!isPrivileged) {
-        return res.status(403).json({ error: 'Unauthorized privilege action' });
+        return res.status(403).json({ error: 'Unauthorized action' });
       }
       await collection.updateOne(
         { "d.ind": targetIndex },
         { $set: { hidden: hiddenStatus } }
       );
-      return res.status(200).json({ success: true, message: `Student status updated to hidden: ${hiddenStatus}` });
+      return res.status(200).json({ success: true, message: `Hidden status updated to ${hiddenStatus}` });
     }
 
     const cleanQuery = query ? query.trim() : "";
@@ -104,7 +104,7 @@ export default async function handler(req, res) {
 
     const formattedResults = records.map(rawRecord => {
       const fullIndex = String(rawRecord.d?.ind || '');
-      // Normal users see first 3 digits + 4 dots (since 7 digits total)
+      // Mask for normal users: first 3 digits + 4 dots (7 digits total)
       const indexNumber = isPrivileged ? fullIndex : (fullIndex.slice(0, 3) + '••••');
       
       const nicVal = rawRecord.d?.nic ? String(rawRecord.d.nic) : '';
@@ -112,7 +112,7 @@ export default async function handler(req, res) {
       
       return {
         indexNumber,
-        fullIndex, // kept internally for admin actions
+        fullIndex,
         name: rawRecord.d?.nam,
         stream: rawRecord.d?.sub,
         zScore: rawRecord.d['z -'],
