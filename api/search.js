@@ -4,7 +4,7 @@ let cachedDb = null;
 
 async function connectToDatabase() {
   if (cachedDb) return cachedDb;
-  const client = new MongoClient(process.env.MONGODB_URI);
+  const client = new MongoClient(process.env.MONGO_URI);
   await client.connect();
   const db = client.db('exam_database');
   cachedDb = db;
