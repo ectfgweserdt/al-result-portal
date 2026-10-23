@@ -183,7 +183,7 @@ export default function App() {
           <svg className="css-icon shield-icon" viewBox="0 0 24 24" width="26" height="26" stroke="currentColor" strokeWidth="2" fill="none"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"></path></svg>
           <div>
             <h2>A/L Result Searching Portal</h2>
-            <p>Fuck C.G. Of Doenets</p>
+            <p>Fuck D.G. Of NIE</p>
           </div>
         </div>
 
@@ -261,7 +261,7 @@ export default function App() {
       <main className="main-content">
         <div className="hero-section">
           <h1>Advanced Level Result Lookup</h1>
-          <p>Year : <strong>{examYear}</strong></p>
+          <p>Exam Year : <strong>{examYear}</strong></p>
         </div>
 
         <form onSubmit={handleSearch} className="search-box-container">
@@ -275,7 +275,7 @@ export default function App() {
             />
           </div>
           <button type="submit" className="tactile-btn search-btn" disabled={loading}>
-            {loading ? 'Searching...' : 'Search Record'}
+            {loading ? 'Searching...' : 'Search Result'}
           </button>
         </form>
 
