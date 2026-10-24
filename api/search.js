@@ -30,7 +30,7 @@ function parseSriLankanID(nic) {
     days = parseInt(nicStr.substring(2, 5), 10);
   }
 
-  let md = days - 2;
+  let md = days - 1;
   let gender = "Male";
   
   if (md >= 500) {
@@ -47,6 +47,25 @@ function parseSriLankanID(nic) {
   };
 }
 
+// Helper to escape special regex characters safely
+function escapeRegExp(string) {
+  return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
+// Smart Tokenized Name Query Builder (Handles initials & order independence)
+function buildSmartNameQuery(queryStr) {
+  const tokens = queryStr.trim().split(/\s+/).filter(Boolean);
+  if (tokens.length === 0) return null;
+
+  // Every token entered by the user must match the start of a word in the student's name
+  const andConditions = tokens.map(token => {
+    const escaped = escapeRegExp(token);
+    return { "d.nam": { $regex: `\\b${escaped}`, $options: "i" } };
+  });
+
+  return { $and: andConditions };
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
@@ -58,7 +77,6 @@ export default async function handler(req, res) {
   const ADMIN_PASS = process.env.SPECIAL_PASSWORD || "secret123";
   const isPrivileged = (username === ADMIN_USER && password === ADMIN_PASS);
 
-  // Added 2027 collection mapping
   const validCollections = {
     "2025": "results_2025",
     "2026": "results_2026",
@@ -70,6 +88,7 @@ export default async function handler(req, res) {
     const db = await connectToDatabase();
     const collection = db.collection(collectionName);
 
+    // Admin action to toggle hidden status
     if (action === 'toggleHide') {
       if (!isPrivileged) {
         return res.status(403).json({ error: 'Unauthorized action' });
@@ -84,15 +103,21 @@ export default async function handler(req, res) {
     const cleanQuery = query ? query.trim() : "";
     const numericQuery = !isNaN(cleanQuery) && cleanQuery !== "" ? Number(cleanQuery) : null;
 
+    // Build flexible search conditions
     let searchConditions = [
       { "d.ind": cleanQuery },
-      { "d.nic": cleanQuery },
-      { "d.nam": { $regex: cleanQuery,$options: "i" } }
+      { "d.nic": cleanQuery }
     ];
 
     if (numericQuery !== null) {
       searchConditions.push({ "d.ind": numericQuery });
       searchConditions.push({ "d.nic": numericQuery });
+    }
+
+    // Add smart multi-word / initial name search
+    const smartNameQuery = buildSmartNameQuery(cleanQuery);
+    if (smartNameQuery) {
+      searchConditions.push(smartNameQuery);
     }
 
     let dbQuery = { $or: searchConditions };
